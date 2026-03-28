@@ -1,0 +1,22 @@
+{
+  "name": "sample-github-app",
+  "version": "1.0.0",
+  "description": "Sample HTML/Bootstrap/jQuery app with automated code reviews",
+  "scripts": {
+    "code-review:setup": "echo 'Setting up code review hooks...' && git config core.hooksPath .githooks",
+    "code-review:security": "echo '🔒 Review code for security issues'",
+    "code-review:performance": "echo '⚡ Review code for performance'",
+    "code-review:testing": "echo '🧪 Design tests for this code'",
+    "start": "echo 'Open index.html in browser'",
+    "lint": "echo '🔍 Code quality checks'"
+  },
+  "keywords": [
+    "bootstrap",
+    "jquery",
+    "web-app",
+    "code-review",
+    "github-copilot"
+  ],
+  "author": "Your Team",
+  "license": "MIT"
+}

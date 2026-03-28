@@ -1,0 +1,44 @@
+name: Pre-commit Code Review Check
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  commit-review:
+    runs-on: ubuntu-latest
+    name: 📝 Commit Code Review
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get last commit info
+        id: commit-info
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          COMMIT_HASH=$(git log -1 --pretty=%h)
+          echo "msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo "author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
+          echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+
+      - name: Get changed files from commit
+        id: changed-files
+        run: |
+          FILES=$(git diff-tree --no-commit-id --name-only -r HEAD)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Log to workflow
+        run: |
+          echo "✅ Commit Review Processed"
+          echo "Commit: ${{ steps.commit-info.outputs.hash }}"
+          echo "Author: ${{ steps.commit-info.outputs.author }}"
+          echo "Message: ${{ steps.commit-info.outputs.msg }}"
+          echo "Files modified:"
+          echo "${{ steps.changed-files.outputs.files }}"

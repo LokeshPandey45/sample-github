@@ -1,0 +1,81 @@
+/* Main Stylesheet */
+:root {
+    --primary-color: #007bff;
+    --danger-color: #dc3545;
+    --success-color: #28a745;
+}
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.container {
+    max-width: 1200px;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    padding: 1rem;
+}
+
+.card-header h5 {
+    margin: 0;
+    color: #333;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+.badge {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.btn {
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+input.form-control {
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+input.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.alert {
+    border-radius: 4px;
+    border: none;
+}
+
+.text-center {
+    color: #999;
+}
