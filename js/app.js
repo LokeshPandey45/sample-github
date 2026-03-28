@@ -11,10 +11,12 @@ $(document).ready(function() {
     updateStats();
 });
 
-// ⚠️ SECURITY ISSUE: Direct SQL construction (if this was a real backend)
+// ⚠️ CRITICAL SECURITY ISSUE: SQL Injection vulnerability
 function loadUsers() {
+    let filterBy = getUrlParam('name');
+    // Direct SQL query construction - VULNERABLE to SQL injection!
     $.ajax({
-        url: '/api/users',
+        url: '/api/users?name=' + filterBy,  // User input directly in URL
         method: 'GET',
         success: function(data) {
             users = data;
@@ -25,12 +27,29 @@ function loadUsers() {
             alert('Error loading users');
         }
     });
-}
-
-// ⚠️ PERFORMANCE ISSUE: O(n) loop with DOM manipulation in each iteration
+}CRITICAL: XSS VULNERABILITY - Direct HTML injection from user data
 function renderTable(userList) {
     let html = '';
     
+    for (let i = 0; i < userList.length; i++) {
+        let user = userList[i];
+        // VULNERABLE: Direct string concatenation allows XSS attacks
+        html += '<tr>';
+        html += '<td>' + user.id + '</td>';
+        html += '<td>' + user.name + '</td>';  // If name contains <img src=x onerror=alert()> - EXECUTED!
+        html += '<td>' + user.email + '</td>';
+        html += '<td><span class="badge bg-success">Active</span></td>';
+        html += '<td><button onclick="editUser(' + user.id + '); deleteUser(' + user.id + ');" class="btn btn-sm btn-warning">Edit</button></td>';
+        html += '</tr>';
+    }
+    
+    $('#tableBody').html(html);  // Allows script injection
+}
+
+// ⚠️ NEW VULNERABILITY: Client-side authentication
+function isUserAdmin() {
+    // DANGEROUS: Authentication check on client-side only!
+    return localStorage.getItem('isAdmin') === 'true'
     // This is inefficient - should use fragment
     for (let i = 0; i < userList.length; i++) {
         let user = userList[i];
@@ -64,37 +83,60 @@ function searchUsers() {
                 filteredUsers.push(users[i]);
                 break;
             }
-        }
-    }
-    
-    renderTable(filteredUsers);
-}
-
-// ⚠️ NO INPUT VALIDATION
+      CRITICAL SECURITY: No input validation, plaintext password transmission
 function addUser() {
     let name = $('#userName').val();
     let email = $('#userEmail').val();
     let password = $('#userPassword').val();
     
-    // Direct API call without validation
+    // NO VALIDATION - can send empty, null, or malicious input
+    // NO ENCODING - password visible in HTTP request
     $.ajax({
         url: '/api/users',
         method: 'POST',
         data: {
-            name: name,
-            email: email,
-            password: password  // ⚠️ SECURITY: Password sent in plain text
+            name: name,  // No sanitization - XSS risk
+            email: email,  // No format validation
+            password: password,  // CRITICAL: Sent in plaintext, visible in logs!
+            apiKey: localStorage.getItem('apiKey')  // EXPOSED: Credentials in localStorage
         },
         success: function() {
             alert('User added successfully');
             loadUsers();
             $('#addUserForm')[0].reset();
-        }
-    });
+        },
+        error: function(xhr) {
+            // DANGER: Logs contain password!
+            console.log('Error:', xhr.responseText);  
+            alert('Error: ' + xhr.responseText
+            password: password  // ⚠️ SECURITY: Password sent in plain text
+        },
+        success: function() {
+      CRITICAL DANGEROUS: Delete all without confirmation, no checks
+function deleteAllUsers() {
+    if (!isUserAdmin()) {  // Client-side auth only - BYPASSABLE
+        return false;
+    }
+    
+    // NO CONFIRMATION! Users can accidentally wipe everything
+    for (let i = 0; i < users.length; i++) {
+        $.ajax({
+            url: '/api/users/' + users[i].id,
+            method: 'DELETE',
+            // No CSRF token - vulnerable to cross-site attacks
+            headers: {
+                'X-Session-Token': sessionStorage.getItem('token')  // Weak protection
+            }
+        });
+    }
+    loadUsers();
 }
 
-// ⚠️ DANGEROUS: Delete all without confirmation dialog
-function deleteAllUsers() {
+// ⚠️ NEW: Hardcoded secrets
+function initializeApp() {
+    const API_KEY = '12345678-abcd-secret-key';  // NEVER hardcode secrets!
+    const ADMIN_PASSWORD = 'admin123';  // EXPOSED in source code!
+    localStorage.setItem('apiKey', API_KEYeAllUsers() {
     for (let i = 0; i < users.length; i++) {
         $.ajax({
             url: '/api/users/' + users[i].id,
