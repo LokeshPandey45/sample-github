@@ -3,91 +3,64 @@ name: Automated Code Review on PR
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  push:
-    branches:
-      - main
-      - develop
 
 jobs:
   security-review:
     runs-on: ubuntu-latest
-    name: 🔒 Security Review
-    if: github.event_name == 'pull_request'
+    name: Security Review
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Comment on PR with Security Review
+      - name: Post security review comment
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = `🔒 **Security Review Summary**
-
-**Automated security checks:**
-- ✅ XSS/Input validation scan
-- ✅ SQL Injection detection
-- ✅ Password & sensitive data exposure
-- ✅ CSRF & session management
-
-**Security checklist:**
-- [ ] No passwords in plain text
-- [ ] All inputs validated & sanitized
-- [ ] No direct DOM manipulation from user input
-- [ ] HTTPS/TLS properly configured
-
-**Vulnerabilities Found:**
-- 🚨 CRITICAL: SQL Injection in loadUsers()
-- 🚨 CRITICAL: XSS attack vectors in renderTable()
-- 🚨 CRITICAL: Plaintext password in addUser()
-- ⚠️ HIGH: Hardcoded API keys
-- ⚠️ HIGH: Client-side auth bypass
-
-**Next steps:** Use \`/code-review\` in Copilot for detailed security audit`;
-              
+            const comment = "🔒 **Security Review Summary**\n\n" +
+              "**Automated security checks:**\n" +
+              "- ✅ XSS/Input validation scan\n" +
+              "- ✅ SQL Injection detection\n" +
+              "- ✅ Password & sensitive data exposure\n" +
+              "- ✅ CSRF & session management\n\n" +
+              "**Vulnerabilities Found:**\n" +
+              "- 🚨 CRITICAL: SQL Injection in loadUsers()\n" +
+              "- 🚨 CRITICAL: XSS attack vectors in renderTable()\n" +
+              "- 🚨 CRITICAL: Plaintext password in addUser()\n" +
+              "- ⚠️ HIGH: Hardcoded API keys\n" +
+              "- ⚠️ HIGH: Client-side auth bypass\n\n" +
+              "Use `/code-review` in Copilot for detailed security audit";
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: comment
             });
-
 
   performance-review:
     runs-on: ubuntu-latest
-    name: ⚡ Performance Review
-    if: github.event_name == 'pull_request'
+    name: Performance Review
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Comment on PR with Performance Review
+      - name: Post performance review comment
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = `⚡ **Performance Review Summary**
-
-**Automated checks:**
-- ✅ DOM manipulation efficiency
-- ✅ jQuery performance (avoid nested loops)
-- ✅ CSS selector optimization
-- ✅ AJAX call optimization
-- ✅ Load time impact analysis
-
-**Performance Issues Found:**
-- ⚠️ O(n²) nested loop in searchUsers()
-- ⚠️ Missing jQuery selector caching
-- ⚠️ Inefficient DOM updates in renderTable()
-- ℹ️ Could use DocumentFragment for batch updates
-
-**Performance checklist:**
-- [ ] No nested loops without justification
-- [ ] DOM batch updates (DocumentFragment)
-- [ ] jQuery caching (cache selectors)
-- [ ] Lazy loading implemented
-- [ ] CSS minified and optimized
-
-Use PerformanceReviewer for detailed analysis: \`/code-review\` → Select "performance"`;
-              
+            const comment = "⚡ **Performance Review Summary**\n\n" +
+              "**Automated checks:**\n" +
+              "- ✅ DOM manipulation efficiency\n" +
+              "- ✅ jQuery performance analysis\n" +
+              "- ✅ CSS selector optimization\n" +
+              "- ✅ AJAX call optimization\n\n" +
+              "**Performance Issues Found:**\n" +
+              "- ⚠️ O(n²) nested loop in searchUsers()\n" +
+              "- ⚠️ Missing jQuery selector caching\n" +
+              "- ⚠️ Inefficient DOM updates in renderTable()\n" +
+              "- ℹ️ Could use DocumentFragment for batch updates\n\n" +
+              "Use `/code-review` in Copilot for analysis";
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -95,53 +68,32 @@ Use PerformanceReviewer for detailed analysis: \`/code-review\` → Select "perf
               body: comment
             });
 
-
   testing-review:
     runs-on: ubuntu-latest
-    name: 🧪 Test Coverage Review
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v40
-        with:
-    if: github.event_name == 'pull_request'
+    name: Testing Review
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Comment on PR with Testing Review
+      - name: Post testing review comment
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = `🧪 **Test Coverage Review Summary**
-
-**Areas requiring test coverage:**
-- [ ] User search functionality
-- [ ] Form validation
-- [ ] Error handling
-- [ ] AJAX error cases
-- [ ] Edge cases (empty arrays, null values)
-
-**Test Coverage Gaps Found:**
-- 🔴 No input validation tests
-- 🔴 Missing security test scenarios
-- 🟡 No AJAX error case tests
-- 🟡 Missing edge case tests
-- 🟡 No malicious input tests
-
-**Test checklist:**
-- ✅ Unit tests for utility functions
-- ✅ Integration tests for user flows
-- ✅ Error handling & edge cases
-- ✅ Mock AJAX responses
-
-Use TestingExpert for test design: \`/code-review\` → Select "testing"`;
-              
+            const comment = "🧪 **Test Coverage Review Summary**\n\n" +
+              "**Areas requiring test coverage:**\n" +
+              "- [ ] User search functionality\n" +
+              "- [ ] Form validation\n" +
+              "- [ ] Error handling\n" +
+              "- [ ] AJAX error cases\n" +
+              "- [ ] Edge cases (empty arrays, null values)\n\n" +
+              "**Test Coverage Gaps Found:**\n" +
+              "- 🔴 No input validation tests\n" +
+              "- 🔴 Missing security test scenarios\n" +
+              "- 🟡 No AJAX error case tests\n" +
+              "- 🟡 Missing edge case tests\n" +
+              "- 🟡 No malicious input tests\n\n" +
+              "Use `/code-review` in Copilot for test design";
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
