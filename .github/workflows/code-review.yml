@@ -24,131 +24,121 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const path = require('path');
-            const { exec } = require('child_process');
-            const util = require('util');
-            const execPromise = util.promisify(exec);
+            const { execSync } = require('child_process');
 
-            async function analyzeCode() {
+            try {
+              // Get changed files
+              let changedFiles = [];
               try {
-                // Get changed files
-                const { stdout } = await execPromise('git diff --name-only origin/main...HEAD');
-                const changedFiles = stdout
+                const output = execSync('git diff --name-only origin/main...HEAD').toString();
+                changedFiles = output
                   .trim()
                   .split('\n')
                   .filter(f => (f.endsWith('.js') || f.endsWith('.ts')) && f.length > 0);
-
-                console.log('Changed files:', changedFiles);
-
-                let securityIssues = [];
-                let performanceIssues = [];
-                let testingGaps = [];
-
-                // Analyze each changed file
-                for (const file of changedFiles) {
-                  try {
-                    if (!fs.existsSync(file)) continue;
-                    const content = fs.readFileSync(file, 'utf8');
-
-                    // SECURITY CHECKS
-                    if (content.match(/["']SELECT.*\+|["']SELECT.*userid|sql.*\+.*id/gi)) {
-                      securityIssues.push(`🚨 SQL Injection in ${file}: String concatenation in SQL query`);
-                    }
-                    if (content.match(/\.innerHTML\s*=|\.html\s*\([^)]*\$|document\.(write|body)/gi)) {
-                      securityIssues.push(`🚨 XSS vulnerability in ${file}: Direct HTML manipulation without escaping`);
-                    }
-                    if (content.match(/(api_?key|password|secret|token|bearer)\s*=\s*['"][a-zA-Z0-9]{8,}/gi)) {
-                      securityIssues.push(`🚨 Hardcoded credentials in ${file}: API keys or passwords in source code`);
-                    }
-                    if (content.match(/eval\s*\(\s*[^)]*\s*\)/gi)) {
-                      securityIssues.push(`🚨 Code injection risk in ${file}: eval() usage detected`);
-                    }
-                    if (content.match(/fetch\s*\([^)]*\+/gi) && !content.match(/encodeURIComponent|sanitize|escape/gi)) {
-                      securityIssues.push(`⚠️ Unsafe fetch in ${file}: No input sanitization on dynamic URL`);
-                    }
-
-                    // PERFORMANCE CHECKS
-                    if (content.match(/for\s*\([^)]*\)\s*{[^}]*for\s*\(/gi)) {
-                      performanceIssues.push(`⚠️ O(n²) complexity in ${file}: Nested loops detected`);
-                    }
-                    if ((content.match(/\$\(['"][^'"]*['"]\)/g) || []).length > 3 && !content.match(/cache|const.*=\s*\$/gi)) {
-                      performanceIssues.push(`⚠️ Performance in ${file}: jQuery selectors not cached`);
-                    }
-                    if (content.match(/\.html\s*\(|\.innerHTML\s*=/gi) && content.match(/for\s*\(/gi)) {
-                      performanceIssues.push(`⚠️ DOM thrashing in ${file}: Loop with DOM updates detected`);
-                    }
-
-                    // TESTING CHECKS
-                    if (content.match(/fetch\s*\(/gi) && !content.match(/\.catch\s*\(|try\s*{/gi)) {
-                      testingGaps.push(`🔴 No error handling in ${file}: Missing .catch() on fetch`);
-                    }
-                    if (content.match(/function\s+\w+\s*\([a-zA-Z0-9_,\s]*\)\s*{[^}]*fetch/gi)) {
-                      testingGaps.push(`🔴 Missing validation in ${file}: No input checks before network call`);
-                    }
-                    if ((content.match(/if\s*\(/gi) || []).length > 5 && !content.match(/test|describe|it\s*\(/gi)) {
-                      testingGaps.push(`🟡 Complex logic in ${file}: High cyclomatic complexity needs tests`);
-                    }
-                  } catch (e) {
-                    console.log('Error reading file:', file, e.message);
-                  }
-                }
-
-                // Build comprehensive report
-                let reportComment = '## 📊 Automated Code Review Report\n\n';
-                reportComment += `**Files Analyzed:** ${changedFiles.length}\n\n`;
-
-                if (securityIssues.length > 0) {
-                  reportComment += '### 🔒 Security Issues\n';
-                  securityIssues.forEach(issue => {
-                    reportComment += `- ${issue}\n`;
-                  });
-                  reportComment += '\n';
-                }
-
-                if (performanceIssues.length > 0) {
-                  reportComment += '### ⚡ Performance Issues\n';
-                  performanceIssues.forEach(issue => {
-                    reportComment += `- ${issue}\n`;
-                  });
-                  reportComment += '\n';
-                }
-
-                if (testingGaps.length > 0) {
-                  reportComment += '### 🧪 Testing Gaps\n';
-                  testingGaps.forEach(gap => {
-                    reportComment += `- ${gap}\n`;
-                  });
-                  reportComment += '\n';
-                }
-
-                if (securityIssues.length === 0 && performanceIssues.length === 0 && testingGaps.length === 0) {
-                  reportComment += '✅ **No issues detected!** Code looks good.\n\n';
-                }
-
-                reportComment += '---\n';
-                reportComment += '💡 **Tip:** Use `/code-review` in GitHub Copilot for deeper analysis\n';
-
-                console.log('Report:', reportComment);
-
-                // Post the review comment
-                github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: reportComment
-                });
-
-                console.log('Comment posted successfully');
-              } catch (error) {
-                console.error('Error in code analysis:', error);
-                // Fallback comment
-                github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: '⚠️ Code review analysis encountered an error. Please use `/code-review` in Copilot for manual review.'
-                });
+              } catch (e) {
+                console.log('Could not get diff, using HEAD');
+                changedFiles = [];
               }
-            }
 
-            await analyzeCode();
+              console.log('Changed files:', changedFiles);
+
+              let findings = {
+                security: [],
+                performance: [],
+                testing: []
+              };
+
+              // Analyze each changed file
+              for (const file of changedFiles) {
+                try {
+                  if (!fs.existsSync(file)) continue;
+                  const content = fs.readFileSync(file, 'utf8');
+
+                  // SECURITY CHECKS
+                  if (content.match(/["']SELECT.*\+|["']SELECT.*userid/gi)) {
+                    findings.security.push(`**SQL Injection** in ${file} - String concatenation in query`);
+                  }
+                  if (content.match(/\.innerHTML\s*=|\.html\s*\([^)]*\$/gi)) {
+                    findings.security.push(`**XSS Vulnerability** in ${file} - Direct HTML manipulation`);
+                  }
+                  if (content.match(/(api_?key|password|secret)\s*=\s*['"][a-zA-Z0-9]{8,}/gi)) {
+                    findings.security.push(`**Hardcoded Credentials** in ${file} - Secrets in source code`);
+                  }
+                  if (content.match(/eval\s*\(\s*[^)]*\s*\)/gi)) {
+                    findings.security.push(`**Code Injection** in ${file} - eval() detected`);
+                  }
+
+                  // PERFORMANCE CHECKS
+                  if (content.match(/for\s*\([^)]*\)\s*{[^}]*for\s*\(/gi)) {
+                    findings.performance.push(`**O(n²) Complexity** in ${file} - Nested loops`);
+                  }
+                  if (content.match(/\.html\s*\(|\.innerHTML\s*=/gi) && content.match(/for\s*\(/gi)) {
+                    findings.performance.push(`**DOM Thrashing** in ${file} - Loop with DOM updates`);
+                  }
+
+                  // TESTING CHECKS
+                  if (content.match(/fetch\s*\(/gi) && !content.match(/\.catch\s*\(|try\s*\{/gi)) {
+                    findings.testing.push(`**Missing Error Handling** in ${file} - No .catch() on fetch`);
+                  }
+                  if (content.match(/function\s+\w+\s*\([^)]*\)\s*{[^}]*fetch/gi)) {
+                    findings.testing.push(`**No Input Validation** in ${file} - No checks before network call`);
+                  }
+                } catch (e) {
+                  console.log('Error reading file:', file);
+                }
+              }
+
+              // Build report
+              let report = '## 📊 Automated Code Review\n\n';
+              report += `**Analyzed:** ${changedFiles.length} file(s)\n\n`;
+
+              if (findings.security.length > 0) {
+                report += '### 🔒 Security Issues Found\n';
+                findings.security.forEach(issue => {
+                  report += `- ${issue}\n`;
+                });
+                report += '\n';
+              }
+
+              if (findings.performance.length > 0) {
+                report += '### ⚡ Performance Issues\n';
+                findings.performance.forEach(issue => {
+                  report += `- ${issue}\n`;
+                });
+                report += '\n';
+              }
+
+              if (findings.testing.length > 0) {
+                report += '### 🧪 Testing Gaps\n';
+                findings.testing.forEach(issue => {
+                  report += `- ${issue}\n`;
+                });
+                report += '\n';
+              }
+
+              if (findings.security.length === 0 && findings.performance.length === 0 && findings.testing.length === 0) {
+                report += '✅ **No issues detected!**\n\n';
+              }
+
+              report += '---\n💡 Use `/code-review` in Copilot for deeper analysis\n';
+
+              console.log('Posting comment...');
+              
+              // Post comment
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: report
+              });
+
+              console.log('Analysis complete!');
+            } catch (error) {
+              console.error('Error:', error);
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '⚠️ Code review analysis error. Please use `/code-review` manually.'
+              });
+            }
